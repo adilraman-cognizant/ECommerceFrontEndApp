@@ -217,15 +217,28 @@
     private async Task CreatePayPalOrder()
     {
         // check if there is an unpaid order first before creating a new one
-        var userOrders = await Http.GetFromJsonAsync<List<Order>>($"api/orders/user/{CurrentUser.Id.ToString()}");
-        if (userOrders.Any(o => o.Status == "Awaiting Payment"))
-        {
-            // if there is an unpaid order, tell the user to pay for it first
-            paypalOrderId = userOrders.First(o => o.Status == "Awaiting Payment").Id;
-            Console.WriteLine($"You have an unpaid order {paypalOrderId}. Please pay for it first.");
-            return;
+        try{
+            var userOrders = await Http.GetFromJsonAsync<List<Order>>($"api/orders/user/{CurrentUser.Id.ToString()}");
+            if (userOrders.Any(o => o.Status == "Awaiting Payment"))
+            {
+                // if there is an unpaid order, tell the user to pay for it first
+                paypalOrderId = userOrders.First(o => o.Status == "Awaiting Payment").Id;
+                Console.WriteLine($"You have an unpaid order {paypalOrderId}. Please pay for it first.");
+                return;
+            }
+            else{
+                // calls e.g. /api/paypal/create-order
+                var response = await Http.PostAsync($"api/paypal/create-order/{CurrentUser.Id.ToString()}", null);
+                if (response.IsSuccessStatusCode)
+                {
+                    
+                    paypalOrderId = await response.Content.ReadFromJsonAsync<int>();
+                    Console.WriteLine($"PayPal order created: {paypalOrderId}");
+                }
+            }
         }
-        else{
+        catch (Exception e){
+            Console.WriteLine($"Error fetching user orders: {e.Message}");
             // calls e.g. /api/paypal/create-order
             var response = await Http.PostAsync($"api/paypal/create-order/{CurrentUser.Id.ToString()}", null);
             if (response.IsSuccessStatusCode)
@@ -235,6 +248,8 @@
                 Console.WriteLine($"PayPal order created: {paypalOrderId}");
             }
         }
+        
+        
         // if bad request say you need to pay for existing order's first
     }
 
