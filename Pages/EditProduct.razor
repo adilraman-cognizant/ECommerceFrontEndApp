@@ -1,0 +1,145 @@
+@page "/edit-product/{id:int}"
+@using EComBlazor.Models
+@using EComBlazor.Services
+@inject ProductService ProductService
+@inject NavigationManager Navigation
+
+<NavBar />
+
+<div class="container mt-5">
+    <div class="row">
+        <!-- Product Image -->
+        <div class="col-md-5 d-flex flex-column align-items-center justify-content-center">
+            <img src="@imagePreviewUrl" alt="Product Image" class="img-fluid rounded shadow mb-3" style="max-width: 100%; height: auto;">
+            <InputFile OnChange="UploadImage" class="form-control" />
+        </div>
+
+        <!-- Editable Product Details -->
+        <div class="col-md-7">
+            <h2 class="text-primary">Edit Product</h2>
+            <div class="mb-3">
+                <label for="productName" class="form-label"><strong>Name:</strong></label>
+                <input id="productName" class="form-control" @bind="product.Name" />
+            </div>
+            <div class="mb-3">
+                <label for="productPrice" class="form-label"><strong>Price:</strong></label>
+                <input id="productPrice" type="number" class="form-control" @bind="product.Price" />
+            </div>
+            <div class="mb-3">
+                <label for="productBrand" class="form-label"><strong>Brand:</strong></label>
+                <input id="productBrand" class="form-control" @bind="product.Brand" />
+            </div>
+            <div class="mb-3">
+                <label for="productCategory" class="form-label"><strong>Category:</strong></label>
+                <input id="productCategory" class="form-control" @bind="product.Category" />
+            </div>
+            <div class="mb-3">
+                <label for="productDescription" class="form-label"><strong>Description:</strong></label>
+                <textarea id="productDescription" class="form-control" rows="4" @bind="product.Description"></textarea>
+            </div>
+
+            <!-- Save Changes Button -->
+            <button class="btn btn-primary rounded-pill px-4 mt-3" @onclick="SaveChanges">Save Changes</button>
+        </div>
+    </div>
+</div>
+
+
+<!-- Success Modal -->
+<div class="modal fade @((showSuccessModal ? "show d-block" : ""))" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Success</h5>
+                <button type="button" class="btn-close" aria-label="Close" @onclick="CloseModal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Successfully updated product.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" @onclick="NavigateToHome">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<FooterBar />
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private Product product = new();
+
+    private bool showSuccessModal = false; // Controls the visibility of the modal
+
+    private string imagePreviewUrl = "../Images/PlaceholderImage.png"; // Default placeholder image
+    private IBrowserFile? imageFileUploaded;
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        product = await ProductService.GetProductAsync(Id);
+        if (product.ImageUrl != null){
+            imagePreviewUrl = product.ImageUrl;
+        }
+
+        // Make sure here admin user is logged in otherwise redirect to login page
+    }
+
+    private async Task SaveChanges()
+    {
+        // Save the updated product details
+        await ProductService.UpdateProductAsync(Id, product);
+
+        if (imageFileUploaded == null)
+        {
+            Console.WriteLine("No image uploaded.");
+           
+        }
+        await ProductService.UploadProductImageAsync(Id, imageFileUploaded);
+        Console.WriteLine("Product details saved successfully.");
+
+        // Show the success modal
+        showSuccessModal = true;
+    }
+
+    private void CloseModal()
+    {
+        showSuccessModal = false;
+    }
+
+    private void NavigateToHome()
+    {
+        // Navigate to the home page
+        Navigation.NavigateTo("/");
+    }
+
+    private async Task UploadImage(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        imageFileUploaded = file; // Save the uploaded image file
+
+        // Validate file type
+        if (!file.ContentType.EndsWith("png", StringComparison.OrdinalIgnoreCase) &&
+            !file.ContentType.EndsWith("jpg", StringComparison.OrdinalIgnoreCase) &&
+            !file.ContentType.EndsWith("jpeg", StringComparison.OrdinalIgnoreCase))
+        {
+            Console.WriteLine("Invalid file type. Please upload an image.");
+            return;
+        }
+
+        // Read the file into a memory stream
+        using var stream = new MemoryStream();
+        await file.OpenReadStream(maxAllowedSize: 15 * 1024 * 1024).CopyToAsync(stream); // Limit to 15 MB
+        var imageBytes = stream.ToArray();
+
+        // Convert the image to a Base64 string for preview
+        imagePreviewUrl = $"data:{file.ContentType};base64,{Convert.ToBase64String(imageBytes)}";
+
+        Console.WriteLine("Image uploaded successfully." + imagePreviewUrl);
+        
+        // Optionally, save the image to the server or cloud storage
+        //newProduct.ImageUrl = imagePreviewUrl; // Save the image URL to the product
+        //newProduct.ImageUrl = "../Images/GooglePixel8.png"; // Save the image URL to the product
+    }
+}

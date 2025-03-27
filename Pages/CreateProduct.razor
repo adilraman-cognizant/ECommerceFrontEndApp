@@ -1,0 +1,150 @@
+@page "/create-product"
+@using EComBlazor.Models
+@using EComBlazor.Services
+@using Microsoft.AspNetCore.Http
+@inject ProductService ProductService
+@inject NavigationManager Navigation
+
+<NavBar />
+
+<div class="container mt-5">
+    <div class="row">
+        <!-- Product Image -->
+        <div class="col-md-5 d-flex flex-column align-items-center justify-content-center">
+            <img src="@imagePreviewUrl" alt="Product Image" class="img-fluid rounded shadow mb-3" style="max-width: 100%; height: auto;">
+            <InputFile OnChange="UploadImage" class="form-control" />
+        </div>
+
+        <!-- Editable Product Details -->
+        <div class="col-md-7">
+            <h2 class="text-primary">Create New Product</h2>
+            <div class="mb-3">
+                <label for="productName" class="form-label"><strong>Name:</strong></label>
+                <input id="productName" class="form-control" placeholder="Enter product name" @bind="newProduct.Name" />
+            </div>
+            <div class="mb-3">
+                <label for="productPrice" class="form-label"><strong>Price:</strong></label>
+                <input id="productPrice" type="number" class="form-control" placeholder="Enter product price" @bind="newProduct.Price" />
+            </div>
+            <div class="mb-3">
+                <label for="productBrand" class="form-label"><strong>Brand:</strong></label>
+                <input id="productBrand" class="form-control" placeholder="Enter product brand" @bind="newProduct.Brand" />
+            </div>
+            <div class="mb-3">
+                <label for="productCategory" class="form-label"><strong>Category:</strong></label>
+                <select id="productCategory" class="form-select" @bind="newProduct.Category">
+                    <option value="">Select a category</option>
+                    <option value="Phone">Phone</option>
+                    <option value="Laptop">Laptop</option>
+                    <option value="TV">TV</option>
+                    <option value="Tablet">Tablet</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="productDescription" class="form-label"><strong>Description:</strong></label>
+                <textarea id="productDescription" class="form-control" rows="4" placeholder="Enter product description" @bind="newProduct.Description"></textarea>
+            </div>
+            <div class="mb-3">
+                <label for="productStock" class="form-label"><strong>Stock:</strong></label>
+                <input id="productStock" type="number" class="form-control" placeholder="Enter product stock" @bind="newProduct.Stock" />
+            </div>
+            <div class="mb-3">
+                <label for="productReleaseDate" class="form-label"><strong>Release Date:</strong></label>
+                <input id="productReleaseDate" type="date" class="form-control" @bind="newProduct.ReleaseDate" />
+            </div>
+
+            <!-- Create Product Button -->
+            <button class="btn btn-primary rounded-pill px-4 mt-3 mb-3" @onclick="CreateProductPressed">Create Product</button>
+        </div>
+    </div>
+</div>
+
+<!-- Success Modal -->
+<div class="modal fade @((showSuccessModal ? "show d-block" : ""))" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">🎉 Success</h5>
+                <button type="button" class="btn-close" aria-label="Close" @onclick="CloseModal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Successfully created product.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" @onclick="NavigateToHome">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<FooterBar />
+
+@code {
+    private IBrowserFile? imageFileUploaded;
+
+   // private IBrowserFile? imageFileUploaded; // Will store uploaded image file
+    private string imagePreviewUrl = "../Images/PlaceholderImage.png"; // Default placeholder image
+    private Product newProduct = new Product{
+        ReleaseDate = new DateTime(2020, 1, 1), // Default release date set to January 1, 2020
+        ImageUrl = "../Images/PlaceholderImage.png"
+        // this is so the date picker has a default value as well
+        // set placeholder image initially
+    };
+    private bool showSuccessModal = false; // Controls the visibility of the success modal
+
+    private async Task CreateProductPressed()
+    {   
+        // Create a new product and get the created product with the generated Id
+        Product prodnew = await ProductService.CreateProductAsync(newProduct);
+
+        Console.WriteLine($"Created Product Id: {prodnew.Id}");
+
+        if (imageFileUploaded != null)
+        {
+            Console.WriteLine($"Uploading image for Product Id: {prodnew.Id}");
+            // Upload the image to the newly created product
+            await ProductService.UploadProductImageAsync(prodnew.Id, imageFileUploaded);
+            Console.WriteLine($"Image uploaded for Product Id: {prodnew.Id}");
+        }
+        
+        // Show the success modal
+        showSuccessModal = true;
+    }
+
+    private void CloseModal()
+    {
+        showSuccessModal = false; // Hide the modal
+    }
+
+    private void NavigateToHome()
+    {
+        // Navigate to the home page
+        Navigation.NavigateTo("/");
+    }
+
+    private async Task UploadImage(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        imageFileUploaded = file; // Save the uploaded image file
+
+        // Validate file type
+        if (!file.ContentType.EndsWith("png", StringComparison.OrdinalIgnoreCase) &&
+            !file.ContentType.EndsWith("jpg", StringComparison.OrdinalIgnoreCase) &&
+            !file.ContentType.EndsWith("jpeg", StringComparison.OrdinalIgnoreCase))
+        {
+            Console.WriteLine("Invalid file type. Please upload an image.");
+            return;
+        }
+
+        // Read the file into a memory stream
+        using var stream = new MemoryStream();
+        await file.OpenReadStream(maxAllowedSize: 15 * 1024 * 1024).CopyToAsync(stream); // Limit to 15 MB
+        var imageBytes = stream.ToArray();
+
+        // Convert the image to a Base64 string for preview
+        imagePreviewUrl = $"data:{file.ContentType};base64,{Convert.ToBase64String(imageBytes)}";
+
+        Console.WriteLine("Image preview success");
+        
+    }
+}

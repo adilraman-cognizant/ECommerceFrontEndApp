@@ -1,0 +1,30 @@
+@page "/login"
+@inject NavigationManager NavManager
+
+<NavBar />
+
+
+<div class="d-flex justify-content-center align-items-center vh-100">
+    <div class="text-center">
+        <!-- GitHub Icon as an Image -->
+        <div>
+            <img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" alt="GitHub Logo" class="mb-4" style="width: 150px; height: 150px;" />
+        </div>
+
+        <!-- Login Button -->
+        <div>
+            <button class="btn btn-dark mt-4 px-5 py-3 rounded-pill" @onclick="LoginWithGitHub">
+                Login with GitHub
+            </button>
+        </div>
+    </div>
+</div>
+
+<FooterBar />
+
+@code {
+    private void LoginWithGitHub()
+    {
+        NavManager.NavigateTo("https://localhost:7147/auth/login", forceLoad: true);
+    }
+}

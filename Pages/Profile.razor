@@ -1,0 +1,125 @@
+@page "/profile"
+@using EComBlazor.AuthServices
+@using EComBlazor.Models
+@inject HttpClient Http
+@inject AuthService AuthService
+@inject NavigationManager NavManager
+
+
+<NavBar />
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <!-- Profile Card -->
+            <div class="card shadow-lg rounded profile-card">
+                <div class="card-header bg-dark text-white text-center">
+                    <h3>User Profile</h3>
+                </div>
+                <div class="card-body">
+                    
+
+                    <!-- Conditional Forms -->
+            
+                    <form>
+                        <!-- Username -->
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Username</label>
+                            <input type="text" id="username" class="form-control" @bind="profile.Username" disabled>
+                        </div>
+                        <!-- First Name -->
+                        <div class="mb-3">
+                            <label for="firstName" class="form-label">First Name</label>
+                            <input type="text" id="firstName" class="form-control" placeholder="Enter your first name" @bind="profile.FirstName">
+                        </div>
+                        <!-- Last Name -->
+                        <div class="mb-3">
+                            <label for="lastName" class="form-label">Last Name</label>
+                            <input type="text" id="lastName" class="form-control" placeholder="Enter your last name" @bind="profile.LastName">
+                        </div>
+                        <!-- Email -->
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email Address</label>
+                            <input type="email" id="email" class="form-control" @bind="profile.Email">
+                        </div>
+                        <!-- Phone -->
+                        <div class="mb-3">
+                            <label for="phone" class="form-label">Phone Number</label>
+                            <input type="tel" id="phone" class="form-control" placeholder="Enter your phone number" @bind="profile.PhoneNumber">
+                        </div>
+                        <!-- Address -->
+                        <div class="mb-3">
+                            <label for="address" class="form-label">Address</label>
+                            <textarea id="address" class="form-control" rows="3" placeholder="Enter your address" @bind="profile.Address"></textarea>
+                        </div>
+                        <!-- Save Button -->
+                        <div class="text-center">
+                            <button type="submit" class="btn btn-primary px-4 rounded-pill" @onclick="HandleValidSubmit">Save Changes</button>
+                        </div>
+                    </form>
+                    
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<FooterBar/>
+
+@code {
+
+    UserProfile profile = new UserProfile();
+    private string confirmationMessage = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await AuthService.SetAuthHeaderAsync();
+            var response = await Http.GetAsync("api/userprofiles/me");
+
+            if (response.IsSuccessStatusCode)
+            {
+                // User is logged in and can access the profile
+                profile = await response.Content.ReadFromJsonAsync<UserProfile>() ?? new UserProfile();
+                //profile.Id.ToString();
+            }
+            else
+            {
+                // You are not logged in hence you receive a 401 Unauthorized status code
+                // Redirect to login page
+                Console.WriteLine($"Error fetching profile: {response.StatusCode}");
+                NavManager.NavigateTo("/login", true); // Redirect to login if an error occurs
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"An error occurred while fetching the profile: {ex.Message}");
+            NavManager.NavigateTo("/login", true); // Redirect to login if an error occurs
+        }
+    }
+
+    async Task HandleValidSubmit()
+    {
+        // TO FIX: NAVIGATION TO HOME DOESN'T WORK?
+
+        var response = await Http.PutAsJsonAsync("api/userprofiles/me", profile);
+        if (response.IsSuccessStatusCode)
+        {
+            confirmationMessage = "Your profile has been updated successfully!";
+            Console.WriteLine(confirmationMessage);
+            
+        }
+        else
+        {
+            confirmationMessage = "An error occurred while updating your profile.";
+            Console.WriteLine(confirmationMessage);
+        }
+
+        Console.WriteLine(confirmationMessage);
+        NavManager.NavigateTo("/", true);
+    }
+
+}

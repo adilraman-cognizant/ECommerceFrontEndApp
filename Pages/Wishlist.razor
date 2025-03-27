@@ -1,0 +1,157 @@
+@page "/wishlist"
+@using EComBlazor.AuthServices
+@using EComBlazor.Models
+@using EComBlazor.Services
+@inject WishlistService WishlistService
+@inject ProductService ProductService
+@inject BasketService BasketService
+@inject HttpClient Http
+@inject AuthService AuthService
+@inject NavigationManager NavManager
+
+<NavBar />
+
+
+<div class="container mt-5">
+    <h2 class="mb-4 text-center">Your Wishlist</h2>
+    <div class="row gx-4">
+        @foreach(var wlItem in WishlistItems){
+            var prod = wlItem.product;
+            <div class="col-lg-3 col-md-4 mb-4">
+                <Card Class="mb-4 h-100 rounded-4" Style="width:17rem;">
+                    <img class="rounded-4" src=@prod.ImageUrl alt="placeholder" Style="height:275px; object-fit:cover;"/>
+                    <CardBody>
+                        <CardTitle>@prod.Name</CardTitle>
+                        <CardText>Category: @prod.Category</CardText>
+                        <CardText>Price: $@prod.Price</CardText>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <Button Color="ButtonColor.Primary" @onclick="() => AddToBasket(prod)">Buy</Button>
+                            <a class="text-decoration-none" @onclick="() => DeleteProductFromWishlist(wlItem.WishlistId)">
+                                <Icon Name="@(wlItem.IsInWishlist ? BlazorBootstrap.IconName.HeartFill : BlazorBootstrap.IconName.Heart)" Color="@(wlItem.IsInWishlist ? IconColor.Danger : IconColor.Secondary)" />
+                            </a>
+                        </div>
+                    </CardBody>
+                </Card>
+            </div>
+        }
+    </div>
+</div>
+
+
+
+<!-- Success Modal -->
+<div class="modal fade show" tabindex="-1" role="dialog" style="display: @(showSuccessModal ? "block" : "none"); background-color: rgba(0, 0, 0, 0.5);">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Product Added</h5>
+                <button type="button" class="btn-close" aria-label="Close" @onclick="CloseModal"></button>
+            </div>
+            <div class="modal-body">
+                <p>The product has been successfully added to your basket.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" @onclick="CloseModal">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+@code {
+
+    private WishListItemDto wItemDto = new();
+    private List<WishList> WishlistProducts = new();
+    private List<WishListItemDto> WishlistItems = new();
+    UserProfile CurrentUser = new UserProfile();
+
+    private bool showSuccessModal = false; // Controls the visibility of the modal
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await AuthService.SetAuthHeaderAsync();
+            var response = await Http.GetAsync("api/userprofiles/me");
+
+            if (response.IsSuccessStatusCode)
+            {
+                // User is logged in and can access the profile
+                CurrentUser = await response.Content.ReadFromJsonAsync<UserProfile>() ?? new UserProfile();
+
+                await GetAndCreateWishlist();
+            }
+            else
+            {
+                // You are not logged in hence you receive a 401 Unauthorized status code
+                // Redirect to login page
+                Console.WriteLine($"Error fetching profile: {response.StatusCode}");
+                NavManager.NavigateTo("/login", true); // Redirect to login if an error occurs
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"An error occurred while fetching the profile: {ex.Message}");
+            NavManager.NavigateTo("/login", true); // Redirect to login if an error occurs
+        }
+    }
+
+    private async Task GetAndCreateWishlist()
+    {
+        WishlistItems.Clear();
+        // Fetch all 
+        WishlistProducts = await WishlistService.GetWishlistAsync(CurrentUser.Id.ToString());
+
+        foreach (var item in WishlistProducts)
+        {
+            wItemDto = new WishListItemDto();
+            wItemDto.WishlistId = item.Id;
+            var prod = await ProductService.GetProductAsync(item.ProductId);
+            wItemDto.product = prod;
+            wItemDto.IsInWishlist = true;
+            WishlistItems.Add(wItemDto);
+        }
+    }
+
+    private async Task DeleteProductFromWishlist(int wId)
+    {
+        // here delete wishlist item ?
+
+        Console.WriteLine($"Deleting product with id {wId} from wishlist");
+        // Delete this basket product quantity 1
+        await WishlistService.DeleteWishlistProductAsync(wId);
+        // Recreate the user's basket with updated products (with quantities) in basket
+        await GetAndCreateWishlist();
+
+        // Re-render the page
+        StateHasChanged();
+
+    }
+
+    // if buy is pressed, add to basket
+    private async Task AddToBasket(Product prod){
+        // Add product to basket
+        // Create BasketProduct object
+        BasketProduct newBasketProduct = new BasketProduct()
+        {
+            UserId = CurrentUser.Id.ToString(),
+            ProductId = prod.Id,
+            Quantity = 1,
+            UnitPrice = prod.Price
+        };
+        Console.WriteLine($"Adding {prod.Name} to basket");
+
+        // Send POST request to BasketProductsController using service class to create this basket product
+        await BasketService.CreateBasketProductAsync(newBasketProduct);
+
+        // Show the success modal
+        showSuccessModal = true;
+    }
+
+    private void CloseModal()
+    {
+        // Close the modal
+        showSuccessModal = false;
+    }
+
+}

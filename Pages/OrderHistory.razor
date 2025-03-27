@@ -1,0 +1,136 @@
+@page "/order-history"
+@using EComBlazor.AuthServices
+@using EComBlazor.Models
+@inject HttpClient Http
+@inject AuthService AuthService
+@inject NavigationManager NavManager
+
+<NavBar />
+
+<div class="container mt-5">
+    <h2 class="mb-4 text-center">Order History</h2>
+
+    @if (OrderDtos.Count == 0)
+    {
+        <p class="text-center text-muted">No orders found.</p>
+    }
+    else
+    {
+        @foreach (var order in OrderDtos)
+        {
+            <div class="mb-4">
+                <h4 class="text-center text-primary">Order Number: #@order.OrderId</h4>
+                <p class="text-center text-muted"><strong>Order Date:</strong> @order.OrderDate</p>
+                <p class="text-center text-muted"><strong>Status:</strong> @order.Status</p> <!-- order status -->
+
+                @foreach (var product in order.OrderProducts)
+                {
+                    <div class="card shadow-sm mb-3">
+                        <div class="row g-0">
+                            <!-- Left Column: Product Image -->
+                            <div class="col-md-3 d-flex align-items-center justify-content-center bg-light">
+                                <img src="@product.product.ImageUrl" alt="@product.product.Name" class="img-fluid rounded">
+                            </div>
+
+                            <!-- Middle Column: Product Details -->
+                            <div class="col-md-6">
+                                <div class="card-body">
+                                    <h5 class="card-title">@product.product.Name</h5>
+                                    <p class="card-text mb-1"><strong>Quantity:</strong> @product.Quantity</p>
+                                    <p class="card-text mb-1"><strong>Unit Price:</strong> $@product.UnitPrice</p>
+                                    <p class="card-text"><strong>Total Price:</strong> $@(product.Quantity * product.UnitPrice)</p>
+                                </div>
+                            </div>
+
+                            <!-- Right Column: Review Section -->
+                            <div class="col-md-3 d-flex align-items-center justify-content-center">
+                                <div class="text-center">
+                                    <!-- If no review exists -->
+                                    <button class="btn btn-primary rounded-pill mb-2">Add Review</button>
+
+                                    <!-- If a review exists -->
+                                    <div>
+                                        <p class="mb-1"><strong>Your Review:</strong> Excellent quality!</p>
+                                        <button class="btn btn-outline-secondary rounded-pill">Edit Review</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    }
+</div>
+
+
+
+@code{
+    UserProfile CurrentUser = new UserProfile();
+    private List<Order> UserOrders = new();
+    private List<OrderDto> OrderDtos = new();
+    private OrderDto orderCombined = new OrderDto();
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await AuthService.SetAuthHeaderAsync();
+            var response = await Http.GetAsync("api/userprofiles/me");
+
+            if (response.IsSuccessStatusCode)
+            {
+                // User is logged in 
+                CurrentUser = await response.Content.ReadFromJsonAsync<UserProfile>() ?? new UserProfile();
+                UserOrders = await Http.GetFromJsonAsync<List<Order>>($"api/orders/user/{CurrentUser.Id.ToString()}");
+                foreach(var order in UserOrders){
+                    Console.WriteLine($"Order ID: {order.Id}");
+                    
+                    orderCombined = new OrderDto();
+                    orderCombined.OrderProducts = new List<OrderProduct>();
+                    orderCombined.OrderId = order.Id;
+                    orderCombined.OrderDate = order.CreatedAt.ToString("dd/MM/yyyy");
+                    orderCombined.Status = order.Status;
+                    foreach(var orderItem in order.OrderItems){
+                        OrderProduct orderProduct= new OrderProduct();
+                        orderProduct.Quantity = orderItem.Quantity;
+                        // add the quantities for the same product
+                        orderProduct.UnitPrice = orderItem.UnitPrice;
+                        orderProduct.product = await Http.GetFromJsonAsync<Product>($"api/products/{orderItem.ProductId}");
+                        orderCombined.OrderProducts.Add(orderProduct);
+                    }
+                    OrderDtos.Add(orderCombined);
+                    
+
+                }
+    
+
+            }
+            else
+            {
+                // You are not logged in hence you receive a 401 Unauthorized status code
+                // Redirect to login page
+                Console.WriteLine($"Error fetching profile: {response.StatusCode}");
+                NavManager.NavigateTo("/login", true); // Redirect to login if an error occurs
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"An error occurred while fetching the profile: {ex.Message}");
+            //NavManager.NavigateTo("/login", true); // Redirect to login if an error occurs
+        }
+    }
+
+    public class OrderProduct{
+        public Product product { get; set; }
+        public int Quantity { get; set; }
+        public decimal UnitPrice { get; set; }
+    }
+
+    public class OrderDto{
+        public int OrderId { get; set; }
+        public List<OrderProduct> OrderProducts { get; set; }
+        public string OrderDate { get; set; }
+        public decimal Price { get; set; }
+        public string Status { get; set; }
+    }
+}

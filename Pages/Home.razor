@@ -1,0 +1,373 @@
+﻿@page "/"
+@using System;
+@using EComBlazor.Models
+@using EComBlazor.Services
+@using EComBlazor.AuthServices
+@inject ProductService ProductService
+@inject NavigationManager Navigation;
+@inject HttpClient Http
+@inject AuthService AuthService
+
+
+<!-- Use the NavBar component button with search form -->
+<NavBar ShowSearchForm="true" OnSearch="SearchForProducts" @bind-SearchQuery="SearchQuery" />
+
+<!-- Category and filter navigation bar  -->
+<div class="topbar">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark" aria-label="Tenth navbar example">
+    <div class="container-fluid">
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarsExample08" aria-controls="navbarsExample08" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse justify-content-md-center" id="navbarsExample08">
+        <ul class="navbar-nav">
+          <li class="nav-item me-2">
+            
+            <!-- Button that show selected Category  -->
+            <Button class="@(SelectedCategory == "All" ? "active-category" : "button-category")" @onclick='() => ResetFilters()'>
+                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> All Products
+            </Button>
+            
+          </li>
+          <li class="nav-item me-2">
+
+            <Button class="@(SelectedCategory == "Phone" ? "active-category" : "button-category")" @onclick='() => ApplyCategoryFilter("Phone")'>
+                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Mobile
+            </Button>
+            
+          </li>
+
+          <li class="nav-item me-2">
+
+            <Button class="@(SelectedCategory == "Laptop" ? "active-category" : "button-category")" @onclick='() => ApplyCategoryFilter("Laptop")'>
+                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Laptop
+            </Button>
+            
+          </li>
+
+           <li class="nav-item me-2">
+
+            <Button class="@(SelectedCategory == "TV" ? "active-category" : "button-category")" @onclick='() => ApplyCategoryFilter("TV")'>
+                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> TV
+            </Button>
+            
+          </li>
+
+           <li class="nav-item me-2">
+
+            <Button class="@(SelectedCategory == "Tablet" ? "active-category" : "button-category")" @onclick='() => ApplyCategoryFilter("Tablet")'>
+                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Tablet
+            </Button>
+            
+          </li>
+          
+        </ul>
+
+        <!-- Filter Dropdown -->
+        <div class="dropdown ms-3 filter-dropdown">
+            <select class="form-select " @bind="SelectedFilter" @bind:event="onchange" aria-label="Filter" Style="color:white; background-color:rgb(28, 28, 28);">
+                <option value="">Select Filter</option>
+                <option value="Price: Low to High">Price: Low to High</option>
+                <option value="Price: High to Low">Price: High to Low</option>
+                <option value="Newest Arrivals">Newest Arrivals</option>
+            </select>
+        </div>
+
+      </div>
+    </div>
+  </nav>
+</div>
+
+<!-- Delete Confirmation Modal for Admin user -->
+<div class="modal fade @((showDeleteModal ? "show d-block" : ""))" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Deletion</h5>
+                <button type="button" class="btn-close" aria-label="Close" @onclick="CloseDeleteModal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this product?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @onclick="CloseDeleteModal">Cancel</button>
+                <button type="button" class="btn btn-danger" @onclick="ConfirmDelete">Confirm</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<article>
+    <PageTitle>Products</PageTitle>
+
+    @if(ShowCarousel){
+        <div class="container">
+            <div class="carousel" Style="height:400px;">
+
+                <Carousel ShowIndicators="true" Autoplay="CarouselAutoPlay.StartOnPageLoad">
+                    <CarouselItem Active="true">
+                        <Image Src="../Images/SamsungFlip6Slide.png" class="carousel-image" Style="height:100%; width:100%; object-fit:cover;"/>
+                    </CarouselItem>
+                    <CarouselItem>
+                        <Image Src="../Images/Iphone16ProSlide.png" class="carousel-image" Style="height:100%; width:100%; object-fit:cover;"/>
+                    </CarouselItem>
+                    <CarouselItem>
+                        <Image Src="../Images/MacbookAirSlide.png" class="carousel-image" Style="height:100%; width:100%; object-fit:cover;"/>
+                    </CarouselItem>
+                </Carousel>
+
+            </div>
+        </div>
+    }
+    else{
+        <h2 class="mt-4 mb-4">@CurrentTitle</h2>
+    }
+
+    <div class="container">
+        @{
+            double noOfProducts = (double) FilteredProducts.Count;
+            int rows = (int) Math.Ceiling(noOfProducts /  4.0);
+        }
+        @for (int i = 1; i <= rows; i++){
+            int startIndex = (i - 1) * 4;
+            int endIndex = Math.Min(i * 4, FilteredProducts.Count);
+            <div class="row gx-4">
+                @for (int j = startIndex; j < endIndex; j++){
+                    var prod = FilteredProducts[j];
+                    <div class="col-lg-3 col-md-4 mb-4">
+                        @if (CurrentUser.Role == "customer" || UserLoggedIn == false){
+                            <a href="specific-product/@prod.Id" style="text-decoration: none; color: inherit;">
+                                <Card Class="mb-4 h-100 rounded-4" Style="width:17rem;">
+                                    <img class="rounded-4" src=@prod.ImageUrl alt="placeholder" Style="height:275px; object-fit:cover;"/>
+                                    <CardBody>
+                                        <CardTitle>@prod.Name (@prod.ReleaseDate.Year)</CardTitle>
+                                        <CardSubTitle Class="mb-2 text-muted">@prod.Price</CardSubTitle>
+                                    </CardBody>
+                                </Card>
+                            </a>
+                        }
+                        else if (CurrentUser.Role == "administrator"){
+                            
+                                <Card Class="mb-4 h-100 rounded-4" Style="width:17rem;">
+                                    
+                                    <img class="rounded-4" src=@prod.ImageUrl alt="placeholder" Style="height:275px; object-fit:cover;"/>
+                                    
+                                    <CardBody>
+                                        <a href="specific-product/@prod.Id" style="text-decoration: none; color: inherit;">
+                                        <CardTitle>@prod.Name (@prod.ReleaseDate.Year)</CardTitle>
+                                        <CardSubTitle Class="mb-2 text-muted">@prod.Price</CardSubTitle>
+                                        </a>
+                                        <Button class="btn btn-warning" @onclick="() => NavigateToEditProductPage(prod.Id)">
+                                            Edit
+                                        </Button>
+                                        <Button class="btn btn-warning" @onclick="() => CheckDeleteProduct(prod.Id)">
+                                            Delete
+                                        </Button>
+                                
+                                    </CardBody>
+                                </Card>
+                        }
+                    </div>
+                }
+            </div>
+        }
+
+    </div>
+
+    
+
+</article>
+
+
+
+<FooterBar/>
+
+
+
+
+@code{
+
+    // TO FIX: 
+    //USE ACTUAL LOGGED IN USER, 
+    //SHOULD BE ABLE TO VIEW AND FILTER PRODUCTS 
+    //AND GO TO SPECIFIC PRODUCT PAGE 
+    //AND SIGN IN ONLY
+
+    
+    private MarkupString CurrentTitle = new MarkupString("");
+
+
+    private bool ShowCarousel = true; // Default to true to show the carousel
+
+    
+    private string selectedFilter = "";
+
+    private string SelectedFilter
+    {
+        get => selectedFilter;
+        set
+        {
+            selectedFilter = value;
+            ApplyFilters(); // Call ApplyFilters whenever the value changes
+        }
+    }
+
+
+    private string SearchQuery {get; set;} = ""; // Holds the user's search query
+
+    private string SelectedCategory = "All"; // Default to "All Products"
+    private List<Product> ProductList = new();
+    private List<Product> FilteredProducts = new();
+
+
+    private UserProfile CurrentUser = new UserProfile();
+    private bool UserLoggedIn = false;
+
+    private bool showDeleteModal = false; // Controls the visibility of the delete confirmation modal
+    private int productIdToDelete; // Stores the ID of the product to delete
+
+    protected override async Task OnInitializedAsync(){
+        ProductList = await ProductService.GetProductsAsync();
+        FilteredProducts = ProductList;
+        
+
+        try
+        {
+            await AuthService.SetAuthHeaderAsync();
+            var response = await Http.GetAsync("api/userprofiles/me");
+
+            if (response.IsSuccessStatusCode)
+            {
+                // User is logged in and can access the profile
+                CurrentUser = await response.Content.ReadFromJsonAsync<UserProfile>() ?? new UserProfile();
+                UserLoggedIn = true;
+            }
+            else
+            {
+                // You are not logged in hence you receive a 401 Unauthorized status code
+                UserLoggedIn = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"An error occurred while fetching the profile: {ex.Message}");
+            UserLoggedIn = false;
+        }
+
+
+    }
+
+    private void ResetFilters(){
+        Console.WriteLine("Resetting Filters");
+        // empty search input if category is selected
+        ShowCarousel = true;
+        selectedFilter = "";
+        SearchQuery = "";
+        FilteredProducts = ProductList;
+        SelectedCategory = "All";
+        CurrentTitle = new MarkupString("");
+        StateHasChanged();
+    }
+
+    private void ApplyCategoryFilter(string cat){
+        // empty search input if category is selected
+        SearchQuery = "";
+        //reset filter if category is selected
+        SelectedFilter = "";
+        FilteredProducts = ProductList.Where(product => product.Category.Contains(cat)).ToList();
+        if (FilteredProducts.Count == 0){
+            // no products in category then just show all products
+            FilteredProducts = ProductList;
+            SelectedCategory = "All";
+            ShowCarousel = true;
+        }
+        else{
+            CurrentTitle = new MarkupString($"Products in <em>{cat}</em>");
+            ShowCarousel = false;
+            SelectedCategory = cat; // Update the selected category if there's products
+            
+        } 
+        StateHasChanged();
+    }
+
+    private void ApplyFilters(){
+        // apply filters based on dropdown
+        switch (SelectedFilter){
+            case "Price: Low to High":
+                FilteredProducts = FilteredProducts.OrderBy(product => product.Price).ToList();
+                break;
+            case "Price: High to Low":
+                FilteredProducts = FilteredProducts.OrderByDescending(product => product.Price).ToList();
+                break;
+            case "Newest Arrivals":
+                // Here sort by Year the product was made/released
+                FilteredProducts = FilteredProducts.OrderByDescending(product => product.ReleaseDate).ToList();
+                break;
+            default:
+                break;
+        }
+
+        StateHasChanged(); // Re-render the component
+    }
+
+
+    private void SearchForProducts()
+    {
+        Console.WriteLine("SearchForProducts called");
+        if (!string.IsNullOrWhiteSpace(SearchQuery))
+        {
+            CurrentTitle = new MarkupString($"Search Results for '{SearchQuery}'");
+            ShowCarousel = false; // remove carousel if search is performed
+            // remove active category if search is performed
+            SelectedCategory = "";
+            SelectedFilter = "";
+            // Filter the product list based on the search query
+            FilteredProducts = ProductList
+                                .Where(product => product.Name.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase))
+                                .ToList();
+        }
+        else
+        {
+            // If the search query is empty, reset the filters
+            FilteredProducts = ProductList;
+            ShowCarousel = true;
+            SelectedCategory = "";
+            SelectedFilter = "";
+        }
+
+        Console.WriteLine($"Search Query: {SearchQuery}"); // Debugging output
+        StateHasChanged(); // Re-render the component
+    }
+
+
+    private void NavigateToEditProductPage(int id){
+        Navigation.NavigateTo($"/edit-product/{id}");
+    }
+
+    private void CheckDeleteProduct(int id)
+    {
+        productIdToDelete = id; // Store the product ID
+        showDeleteModal = true; // Show the modal
+    }
+
+    private void CloseDeleteModal()
+    {
+        showDeleteModal = false; // Hide the modal
+    }
+
+    private async Task ConfirmDelete()
+    {
+        showDeleteModal = false; // Hide the modal
+        await DeleteProduct(productIdToDelete); // Call the delete function with the stored product ID
+    }
+
+    private async Task DeleteProduct(int id)
+    {
+        await ProductService.DeleteProductAsync(id); // Delete the product
+        ProductList = await ProductService.GetProductsAsync(); // Refresh the product list
+        FilteredProducts = ProductList; // Update the filtered list
+        StateHasChanged(); // Re-render the component
+    }
+
+}

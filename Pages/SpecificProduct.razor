@@ -1,0 +1,228 @@
+@page "/specific-product/{id:int}"
+@using System;
+@using EComBlazor.Models
+@using EComBlazor.Services
+@using EComBlazor.AuthServices
+@inject ProductService ProductService
+@inject BasketService BasketService
+@inject WishlistService WishlistService
+@inject ReviewService ReviewService
+@inject NavigationManager Navigation;
+@inject HttpClient Http
+@inject AuthService AuthService
+
+<!-- NavBar has false search field and button by default so no need to specify here -->
+<NavBar />
+
+<div class="container mt-5">
+    <div class="row">
+        <!-- Product Image -->
+        <div class="col-md-5 d-flex align-items-center justify-content-center">
+            <img src="@product.ImageUrl" alt="@product.Name" class="img-fluid rounded shadow" style="max-width: 100%; height: auto;">
+        </div>
+
+        <!-- Product Details -->
+        <div class="col-md-7">
+            <h2 class="text-primary">@product.Name</h2>
+            <h4 class="text-success">$@product.Price</h4>
+            <p><strong>Brand:</strong> @product.Brand</p> <!-- Assuming the first word of the name is the brand -->
+            <p><strong>Category:</strong> @product.Category</p>
+            <p><strong>Description:</strong> @product.Description </p>
+
+            @if (!UserLoggedIn)
+            {
+                <p class="text-danger">Please Sign In to add to basket or wishlist</p>
+            }
+
+            <!-- Add to Basket Button -->
+            <button class="btn btn-primary rounded-pill px-4 mt-3" disabled="@(UserLoggedIn == false)" @onclick="() => AddToBasket(product)">Add to Basket</button>
+
+            <!-- Add to Wishlist Button -->
+            <button class="btn btn-info rounded-pill px-4 mt-3" disabled="@(UserLoggedIn == false)"  @onclick="() => AddToWishlist(product)">Add to Wishlist</button>
+                        
+
+        </div>
+    </div>
+</div>
+
+<div class="container mt-5">
+    <h3>Reviews</h3>
+    @if (ReviewDtos.Count == 0)
+    {
+        <p class="text-muted">No reviews available for this product.</p>
+    }
+    else
+    {
+        @foreach (var review in ReviewDtos)
+        {
+            <div class="card mb-3 shadow-sm">
+                <div class="row g-0 align-items-center">
+                    <!-- Left Side: User Icon and Username -->
+                    <div class="col-md-2 text-center">
+                        <Icon Name="IconName.PersonCircle" Size="IconSize.x3" Color="IconColor.Primary" />
+                        <p class="mt-2 mb-0"><strong>@review.user.Username</strong></p>
+                    </div>
+
+                    <!-- Middle: Star Rating -->
+                    <div class="col-md-4 text-center">
+                        <div class="d-flex justify-content-center">
+                            @for (int i = 1; i <= 5; i++)
+                            {
+                                if (i <= review.Rating)
+                                {
+                                    <Icon Name="IconName.StarFill" Size="IconSize.x2" Color="IconColor.Warning" />
+                                }
+                                else
+                                {
+                                    <Icon Name="IconName.Star" Size="IconSize.x2" Color="IconColor.Secondary" />
+                                }
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Right Side: Review Comment -->
+                    <div class="col-md-6">
+                        <div class="card-body">
+                            <p class="card-text">@review.Comment</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+</div>
+
+<FooterBar/>
+
+<!-- Success Modal -->
+<div class="modal fade show" tabindex="-1" role="dialog" style="display: @(showSuccessModal ? "block" : "none"); background-color: rgba(0, 0, 0, 0.5);">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Product Added</h5>
+                <button type="button" class="btn-close" aria-label="Close" @onclick="CloseModal"></button>
+            </div>
+            <div class="modal-body">
+                <p>The product has been successfully added to your basket.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" @onclick="CloseModal">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@code{
+
+    [Parameter] public int Id {get; set;}
+
+    private List<BasketProduct> BasketProducts = new();
+    private Product product = new();
+    private List<Review> Reviews = new();
+    private List<ReviewDto> ReviewDtos = new();
+    private ReviewDto reviewDto = new();
+
+    private UserProfile CurrentUser = new UserProfile();
+    private bool UserLoggedIn = false;
+
+
+    private bool showSuccessModal = false; // Controls the visibility of the modal
+    protected override async Task OnInitializedAsync(){
+        product = await ProductService.GetProductAsync(Id);
+        Reviews = await ReviewService.GetProductReviewsAsync(Id);
+
+
+        try
+        {
+            await AuthService.SetAuthHeaderAsync();
+            var response = await Http.GetAsync("api/userprofiles/me");
+
+            if (response.IsSuccessStatusCode)
+            {
+                // User is logged in and can access the profile
+                CurrentUser = await response.Content.ReadFromJsonAsync<UserProfile>() ?? new UserProfile();
+                UserLoggedIn = true;
+                
+            }
+            else
+            {
+                // You are not logged in hence you receive a 401 Unauthorized status code
+                UserLoggedIn = false;
+            }
+
+            try{
+                // Get
+                await AuthService.SetAuthHeaderAsync();
+                var allUsers = await Http.GetFromJsonAsync<List<UserProfile>>("api/userprofiles");
+
+                foreach (var review in Reviews)
+                {
+                    Console.WriteLine($"Review: {review.Id} - {review.Comment}");
+                    reviewDto = new ReviewDto();
+                    reviewDto.ReviewId = review.Id;
+                    reviewDto.product = await ProductService.GetProductAsync(review.ProductId);
+                    reviewDto.user = allUsers.Find(u => u.Id.ToString() == review.UserId);
+                    reviewDto.Rating = review.Rating;
+                    reviewDto.Comment = review.Comment;
+                    ReviewDtos.Add(reviewDto);
+                
+                }
+            }
+            catch (Exception e){
+                Console.WriteLine($"Error transferring review object to review DTO: {e.Message}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"An error occurred while fetching the profile: {ex.Message}");
+            UserLoggedIn = false;
+        }
+    }
+
+
+    private async Task AddToBasket(Product prod){
+        // Add product to basket
+        // Create BasketProduct object
+        BasketProduct newBasketProduct = new BasketProduct()
+        {
+            UserId = CurrentUser.Id.ToString(),
+            ProductId = prod.Id,
+            Quantity = 1,
+            UnitPrice = prod.Price
+        };
+        Console.WriteLine($"Adding {prod.Name} to basket");
+
+        // Send POST request to BasketProductsController using service class to create this basket product
+        await BasketService.CreateBasketProductAsync(newBasketProduct);
+
+        // Show the success modal
+        showSuccessModal = true;
+    }
+
+    private async Task AddToWishlist(Product prod){
+        // Add product to wishlist
+        // Create WishlistProduct object
+        WishList newWishlistProduct = new WishList()
+        {
+            UserId = CurrentUser.Id.ToString(),
+            ProductId = prod.Id
+        };
+        Console.WriteLine($"Adding {prod.Name} to wishlist");
+
+        // Send POST request to WishlistsController using service class to create this wishlist product
+        await WishlistService.AddWishlistProductAsync(newWishlistProduct);
+
+
+        // Show the success modal
+        showSuccessModal = true;
+    }
+
+    private void CloseModal()
+    {
+        // Close the modal
+        showSuccessModal = false;
+    }
+
+
+}

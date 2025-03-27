@@ -1,0 +1,57 @@
+@page "/order-confirmation"
+@using EComBlazor.AuthServices
+@inject HttpClient Http
+@inject AuthService AuthService
+@inject NavigationManager NavManager
+
+<NavBar />
+
+<h1> Order Confirmation Page </h1>
+
+<h3>Payment Success!</h3>
+
+@if (string.IsNullOrEmpty(orderId))
+{
+    <p>No order ID found.</p>
+}
+else
+{
+    <p>Payment success for order @orderId via @method!</p>
+    @if (!string.IsNullOrEmpty(statusMessage))
+    {
+        <div class="alert alert-success">@statusMessage</div>
+    }
+}
+
+@code {
+    private string orderId = "";
+    private string method = "";
+    private string statusMessage = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        // parse query
+        var uri = NavManager.ToAbsoluteUri(NavManager.Uri);
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        orderId = query["orderId"] ?? "";
+        method = query["method"] ?? "";
+
+        // attach JWT so the MarkPaid endpoint is authorized
+        await AuthService.SetAuthHeaderAsync();
+
+        if (!string.IsNullOrEmpty(orderId))
+        {
+            var response = await Http.PostAsync($"api/orders/markpaid/{orderId}", null);
+            if (response.IsSuccessStatusCode)
+            {
+                Console.WriteLine($"Order {orderId} marked as Paid. Cart cleared, stock reduced.");
+                statusMessage = $"Order {orderId} marked as Paid. Cart cleared, stock reduced.";
+            }
+            else
+            {
+                Console.WriteLine($"Failed to mark order {orderId} as paid. Status: {response.StatusCode}");
+                statusMessage = $"Failed to mark order {orderId} as paid. Status: {response.StatusCode}";
+            }
+        }
+    }
+}
