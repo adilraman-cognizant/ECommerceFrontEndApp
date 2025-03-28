@@ -20,6 +20,12 @@ namespace EComBlazor.Services{
             return await _httpClient.GetFromJsonAsync<List<Review>>($"api/reviews/{prodId}");
         }
 
+        public async Task<Review> GetUserProductReview(string userId, int prodId)
+        {
+            // Makes an HTTP GET request to fetch the review list from the API.
+            return await _httpClient.GetFromJsonAsync<Review>($"api/reviews/user/{userId}/{prodId}");
+        }
+
         public async Task AddReviewAsync(Review review)
         {
             // Makes an HTTP POST request to add a new review to the API.

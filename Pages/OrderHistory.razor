@@ -51,7 +51,7 @@
                                     <button class="btn btn-primary rounded-pill mb-2" @onclick="() => OpenReviewModal(product.product.Id)">Add Review</button>
                                     <!-- If a review exists -->
                                     <div>
-                                        <p class="mb-1"><strong>Your Review:</strong> Excellent quality!</p>
+                                        <p class="mb-1"><strong>Your Review:</strong> @product.review</p>
                                         <button class="btn btn-outline-secondary rounded-pill">Edit Review</button>
                                     </div>
                                 </div>
@@ -152,6 +152,8 @@
                         // add the quantities for the same product
                         orderProduct.UnitPrice = orderItem.UnitPrice;
                         orderProduct.product = await Http.GetFromJsonAsync<Product>($"api/products/{orderItem.ProductId}");
+                        orderProduct.review = await ReviewService.GetUserProductReview(CurrentUser.Id.ToString(), orderProduct.product.Id);
+
                         orderCombined.OrderProducts.Add(orderProduct);
                     }
                     OrderDtos.Add(orderCombined);
@@ -233,6 +235,7 @@
         public Product product { get; set; }
         public int Quantity { get; set; }
         public decimal UnitPrice { get; set; }
+        public Review review { get; set; }
     }
 
     public class OrderDto{
