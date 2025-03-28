@@ -161,7 +161,10 @@
                     reviewDto = new ReviewDto();
                     reviewDto.ReviewId = review.Id;
                     //reviewDto.product = await ProductService.GetProductAsync(review.ProductId);
-                    reviewDto.user = await ProfileService.GetUserProfileAsync(review.UserId);
+                    if(int.TryParse(review.UserId, out int uId)){
+                        Console.WriteLine($"UserId {uId} is an integer");
+                    }
+                    reviewDto.user = await ProfileService.GetUserProfileAsync(uId);
                     if (reviewDto.user == null)
                     {
                         Console.WriteLine($"User profile for UserId {review.UserId} is null.");
