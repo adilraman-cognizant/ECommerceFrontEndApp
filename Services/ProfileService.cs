@@ -1,6 +1,5 @@
 using System.Net.Http.Json;
 using BlazorBootstrap;
-using EComBlazor.AuthServices;
 using EComBlazor.Models;
 using EComBlazor.Services;
 using Microsoft.AspNetCore.Components.Forms;
@@ -10,7 +9,7 @@ namespace EComBlazor.Services{
 
     public class ProfileService{
         private readonly HttpClient _httpClient;
-        private AuthService AuthService;
+        
 
         public ProfileService(HttpClient httpClient){
             _httpClient = httpClient;
@@ -19,7 +18,6 @@ namespace EComBlazor.Services{
 
         public async Task<UserProfile> GetUserProfileAsync(string userId)
         {
-            await AuthService.SetAuthHeaderAsync();
             // Makes an HTTP GET request to fetch the user profile from the API.
             return await _httpClient.GetFromJsonAsync<UserProfile>($"api/userprofiles/{userId}");
         }

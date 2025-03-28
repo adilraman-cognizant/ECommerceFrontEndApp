@@ -167,6 +167,9 @@
                         Console.WriteLine($"User profile for UserId {review.UserId} is null.");
                         continue;
                     }
+                    else{
+                        Console.WriteLine($"User profile for UserId {review.UserId} is {reviewDto.user.Username}");
+                    }
                     reviewDto.Rating = review.Rating;
                     reviewDto.Comment = review.Comment;
                     ReviewDtos.Add(reviewDto);
