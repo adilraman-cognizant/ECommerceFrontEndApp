@@ -19,7 +19,7 @@ namespace EComBlazor.Services{
         public async Task<UserProfile> GetUserProfileAsync(int userId)
         {
             // Makes an HTTP GET request to fetch the user profile from the API.
-            return await _httpClient.GetFromJsonAsync<UserProfile>($"api/userprofiles/{userId}");
+            return await _httpClient.GetFromJsonAsync<UserProfile>($"api/profiles/{userId}");
         }
 
     
