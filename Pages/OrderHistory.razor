@@ -1,6 +1,8 @@
 @page "/order-history"
 @using EComBlazor.AuthServices
 @using EComBlazor.Models
+@using EComBlazor.Services;
+@inject ReviewService ReviewService
 @inject HttpClient Http
 @inject AuthService AuthService
 @inject NavigationManager NavManager
@@ -46,8 +48,7 @@
                             <div class="col-md-3 d-flex align-items-center justify-content-center">
                                 <div class="text-center">
                                     <!-- If no review exists -->
-                                    <button class="btn btn-primary rounded-pill mb-2">Add Review</button>
-
+                                    <button class="btn btn-primary rounded-pill mb-2" @onclick="() => OpenReviewModal(product.product.Id)">Add Review</button>
                                     <!-- If a review exists -->
                                     <div>
                                         <p class="mb-1"><strong>Your Review:</strong> Excellent quality!</p>
@@ -65,11 +66,62 @@
 
 
 
+<!-- Review Modal -->
+<div class="modal fade show" tabindex="-1" role="dialog" style="display: @(showReviewModal ? "block" : "none"); background-color: rgba(0, 0, 0, 0.5);">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Review</h5>
+                <button type="button" class="btn-close" aria-label="Close" @onclick="CloseReviewModal"></button>
+    
+            </div>
+            <div class="modal-body">
+                <div class="text-center">
+                    <!-- Star Rating -->
+                    <div class="d-flex justify-content-center mb-3">
+                        @for (int i = 1; i <= 5; i++)
+                        {
+                            <span @onclick="() => SetRating(i)" style="cursor: pointer;">
+                                @if (i <= ReviewRating)
+                                {
+                                    <Icon Name="IconName.StarFill" Size="IconSize.x2" Color="IconColor.Warning" />
+                                }
+                                else
+                                {
+                                    <Icon Name="IconName.Star" Size="IconSize.x2" Color="IconColor.Secondary" />
+                                }
+                            </span>
+                        }
+                    </div>
+
+                    <!-- Comment Input -->
+                    <textarea class="form-control mb-3" placeholder="Write your review..." @bind="ReviewComment"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @onclick="CloseReviewModal">Cancel</button>
+                <button type="button" class="btn btn-primary" @onclick="SubmitReview">Submit</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
 @code{
     UserProfile CurrentUser = new UserProfile();
     private List<Order> UserOrders = new();
     private List<OrderDto> OrderDtos = new();
     private OrderDto orderCombined = new OrderDto();
+
+
+    // For review:
+    private bool showReviewModal = false; // Controls the visibility of the review modal
+    private int ReviewRating = 0; // Holds the selected rating
+    private string ReviewComment = ""; // Holds the review comment
+    private int CurrentProductId; // Holds the ProductId for the review
+
+
     protected override async Task OnInitializedAsync()
     {
         try
@@ -119,6 +171,57 @@
             //NavManager.NavigateTo("/login", true); // Redirect to login if an error occurs
         }
     }
+
+
+    // Opens the review modal and sets the ProductId
+    private void OpenReviewModal(int productId)
+    {
+        CurrentProductId = productId;
+        ReviewRating = 0; // Reset rating
+        ReviewComment = ""; // Reset comment
+        showReviewModal = true;
+    }
+
+    // Closes the review modal
+    private void CloseReviewModal()
+    {
+        showReviewModal = false;
+    }
+
+    // Sets the rating when a star is clicked
+    private void SetRating(int rating)
+    {
+        ReviewRating = rating;
+    }
+
+    // Submits the review
+    private async Task SubmitReview()
+    {
+        if (ReviewRating > 0)
+        {
+            var newReview = new Review
+            {
+                ProductId = CurrentProductId,
+                Rating = ReviewRating,
+                Comment = ReviewComment == null ? "" : ReviewComment,
+                UserId = CurrentUser.Id.ToString() // Assuming the user is logged in
+            };
+
+            // Send the review to the API
+            await ReviewService.AddReviewAsync(newReview);
+
+            // Close the modal
+            showReviewModal = false;
+
+            // Optionally, refresh the page or update the UI
+            Console.WriteLine($"Review submitted for ProductId: {CurrentProductId}");
+        }
+        else
+        {
+            Console.WriteLine("Please provide a rating and a comment.");
+        }
+    }
+
 
     public class OrderProduct{
         public Product product { get; set; }
