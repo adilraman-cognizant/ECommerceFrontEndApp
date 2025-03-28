@@ -15,6 +15,7 @@ builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<BasketService>();
 builder.Services.AddScoped<WishlistService>();
 builder.Services.AddScoped<ReviewService>();
+builder.Services.AddScoped<ProfileService>();
 builder.Services.AddScoped<AuthService>();
 
 
