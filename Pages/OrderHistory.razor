@@ -47,14 +47,17 @@
                             <!-- Right Column: Review Section -->
                             <div class="col-md-3 d-flex align-items-center justify-content-center">
                                 <div class="text-center">
-                                    <!-- If no review exists -->
-                                    <button class="btn btn-primary rounded-pill mb-2" @onclick="() => OpenReviewModal(product.product.Id)">Add Review</button>
-                                    <!-- If a review exists -->
-                                    <div>
-                                        <p class="mb-1"><strong>Your Rating:</strong> @product.review.Rating</p>
-                                        <p class="mb-1"><strong>Your Review:</strong> @product.review.Comment</p>
-                                        <button class="btn btn-outline-secondary rounded-pill">Edit Review</button>
-                                    </div>
+                                    @if (product.review == null){
+                                        <button class="btn btn-primary rounded-pill mb-2" @onclick="() => OpenReviewModal(product.product.Id)">Add Review</button>
+                                    }
+                                    else{
+                                        <!-- If a review exists -->
+                                        <div>
+                                            <p class="mb-1"><strong>Your Rating:</strong> @product.review.Rating</p>
+                                            <p class="mb-1"><strong>Your Review:</strong> @product.review.Comment</p>
+                                            <button class="btn btn-outline-secondary rounded-pill">Edit Review</button>
+                                        </div>
+                                    }
                                 </div>
                             </div>
                         </div>
@@ -154,7 +157,6 @@
                         orderProduct.UnitPrice = orderItem.UnitPrice;
                         orderProduct.product = await Http.GetFromJsonAsync<Product>($"api/products/{orderItem.ProductId}");
                         orderProduct.review = await ReviewService.GetUserProductReview(CurrentUser.Id.ToString(), orderProduct.product.Id);
-
                         orderCombined.OrderProducts.Add(orderProduct);
                     }
                     OrderDtos.Add(orderCombined);
@@ -236,7 +238,7 @@
         public Product product { get; set; }
         public int Quantity { get; set; }
         public decimal UnitPrice { get; set; }
-        public Review review { get; set; }
+        public Review? review { get; set; }
     }
 
     public class OrderDto{
