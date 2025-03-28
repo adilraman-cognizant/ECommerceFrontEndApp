@@ -73,7 +73,6 @@
             <div class="modal-header">
                 <h5 class="modal-title">Add Review</h5>
                 <button type="button" class="btn-close" aria-label="Close" @onclick="CloseReviewModal"></button>
-    
             </div>
             <div class="modal-body">
                 <div class="text-center">
@@ -84,11 +83,11 @@
                             <span @onclick="() => SetRating(i)" style="cursor: pointer;">
                                 @if (i <= ReviewRating)
                                 {
-                                    <Icon Name="IconName.StarFill" Size="IconSize.x2" Color="IconColor.Warning" />
+                                    <i class="bi bi-star-fill text-warning" style="font-size: 2rem;"></i> <!-- Filled Star -->
                                 }
                                 else
                                 {
-                                    <Icon Name="IconName.Star" Size="IconSize.x2" Color="IconColor.Secondary" />
+                                    <i class="bi bi-star text-secondary" style="font-size: 2rem;"></i> <!-- Empty Star -->
                                 }
                             </span>
                         }
