@@ -6,22 +6,23 @@
 
 <NavBar />
 
-<h1> Order Confirmation Page </h1>
+<div class="container mt-5">
 
-<h3>Payment Success!</h3>
+    <h3 class="mb-4 text-center">Payment Success!</h3>
 
-@if (string.IsNullOrEmpty(orderId))
-{
-    <p>No order ID found.</p>
-}
-else
-{
-    <p>Payment success for order @orderId via @method!</p>
-    @if (!string.IsNullOrEmpty(statusMessage))
+    @if (string.IsNullOrEmpty(orderId))
     {
-        <div class="alert alert-success">@statusMessage</div>
+        <p>No order ID found.</p>
     }
-}
+    else
+    {
+        <p>Payment success for order @orderId via @method!</p>
+        @if (!string.IsNullOrEmpty(statusMessage))
+        {
+            <div class="alert alert-success">@statusMessage</div>
+        }
+    }
+</div>
 
 @code {
     private string orderId = "";
@@ -45,7 +46,7 @@ else
             if (response.IsSuccessStatusCode)
             {
                 Console.WriteLine($"Order {orderId} marked as Paid. Cart cleared, stock reduced.");
-                statusMessage = $"Order {orderId} marked as Paid. Cart cleared, stock reduced.";
+                statusMessage = $"Order {orderId} marked as Paid. Basket cleared, stock reduced.";
             }
             else
             {
