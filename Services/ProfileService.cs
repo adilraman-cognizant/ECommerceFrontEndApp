@@ -17,7 +17,7 @@ namespace EComBlazor.Services{
         }
 
 
-        public async Task<UserProfile> GetUserProfileAsync(int userId)
+        public async Task<UserProfile> GetUserProfileAsync(string userId)
         {
             await AuthService.SetAuthHeaderAsync();
             // Makes an HTTP GET request to fetch the user profile from the API.

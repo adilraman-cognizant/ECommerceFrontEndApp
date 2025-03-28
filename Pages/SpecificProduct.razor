@@ -160,8 +160,8 @@
                     Console.WriteLine($"Review: {review.Id} - {review.Comment}");
                     reviewDto = new ReviewDto();
                     reviewDto.ReviewId = review.Id;
-                    reviewDto.product = await ProductService.GetProductAsync(review.ProductId);
-                    reviewDto.user = await ProfileService.GetUserProfileAsync(int.Parse(review.UserId));
+                    //reviewDto.product = await ProductService.GetProductAsync(review.ProductId);
+                    reviewDto.user = await ProfileService.GetUserProfileAsync(review.UserId);
                     reviewDto.Rating = review.Rating;
                     reviewDto.Comment = review.Comment;
                     ReviewDtos.Add(reviewDto);
