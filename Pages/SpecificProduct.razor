@@ -7,6 +7,7 @@
 @inject BasketService BasketService
 @inject WishlistService WishlistService
 @inject ReviewService ReviewService
+@inject ProfileService ProfileService
 @inject NavigationManager Navigation;
 @inject HttpClient Http
 @inject AuthService AuthService
@@ -152,9 +153,7 @@
             }
 
             try{
-                // Get
-                await AuthService.SetAuthHeaderAsync();
-                var allUsers = await Http.GetFromJsonAsync<List<UserProfile>>("api/userprofiles");
+
 
                 foreach (var review in Reviews)
                 {
@@ -162,7 +161,7 @@
                     reviewDto = new ReviewDto();
                     reviewDto.ReviewId = review.Id;
                     reviewDto.product = await ProductService.GetProductAsync(review.ProductId);
-                    reviewDto.user = allUsers.Find(u => u.Id.ToString() == review.UserId);
+                    reviewDto.user = await ProfileService.GetUserProfileAsync(int.Parse(review.UserId));
                     reviewDto.Rating = review.Rating;
                     reviewDto.Comment = review.Comment;
                     ReviewDtos.Add(reviewDto);
