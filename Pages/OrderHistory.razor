@@ -51,7 +51,8 @@
                                     <button class="btn btn-primary rounded-pill mb-2" @onclick="() => OpenReviewModal(product.product.Id)">Add Review</button>
                                     <!-- If a review exists -->
                                     <div>
-                                        <p class="mb-1"><strong>Your Review:</strong> @product.review</p>
+                                        <p class="mb-1"><strong>Your Rating:</strong> @product.review.Rating</p>
+                                        <p class="mb-1"><strong>Your Review:</strong> @product.review.Comment</p>
                                         <button class="btn btn-outline-secondary rounded-pill">Edit Review</button>
                                     </div>
                                 </div>
