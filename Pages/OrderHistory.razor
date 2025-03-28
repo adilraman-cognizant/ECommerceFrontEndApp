@@ -82,9 +82,10 @@
                         @for (int i = 1; i <= 5; i++)
                         {
                             
-                            Console.WriteLine($"Review Rating in loop: {i}/{ReviewRating}");
-                            
-                            <span @onclick="() => SetRating(i)" style="cursor: pointer;">
+                            //Console.WriteLine($"Review Rating in loop: {i}/{ReviewRating}");
+                            var starIndex = i;
+                            Console.WriteLine($"Star Index in loop: {i}/{ReviewRating}");
+                            <span @onclick="() => SetRating(starIndex)" style="cursor: pointer;">
                                 @if (i <= ReviewRating)
                                 {
                                     <Icon Name="IconName.StarFill" Size="IconSize.x2" Color="IconColor.Warning" />
